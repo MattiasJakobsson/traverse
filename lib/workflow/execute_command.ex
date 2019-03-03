@@ -5,7 +5,7 @@ defmodule Traverse.Workflow.ExecuteCommand do
     {:ok, process} = GenServer.start_link(String.to_existing_atom("Elixir.#{definition["command"]}"), [])
 
     response = GenServer.call(process, {:execute, definition["params"]})
-
+    
     {:next, response}
   end
 end
