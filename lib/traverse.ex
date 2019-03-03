@@ -2,14 +2,15 @@ defmodule Traverse do
   use Application
 
   def start(_type, _args) do
+    import Supervisor.Spec, warn: false
+    
     opts = [strategy: :one_for_one, name: Traverse.Supervisor]
 
-    Supervisor.start_link(children(), opts)
-  end
-
-  def children() do
-    [
-      {Traverse.Workflow.Engine, []}
+    children = [
+      {Traverse.Workflow.Engine, []},
+      worker(Traverse.CronScheduler, [])
     ]
+
+    Supervisor.start_link(children, opts)
   end
 end

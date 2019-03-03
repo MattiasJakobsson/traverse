@@ -4,11 +4,33 @@ defmodule Traverse.Workflow.Engine do
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
+  
+  def schedule_workflow(triggers, definition) do
+    {:ok, parsed_triggers} = Poison.Parser.parse(triggers)
+    
+    __schedule__(parsed_triggers, definition)
+    
+    :ok
+  end
+
+  def __schedule__([head | _tail = []], definition) do
+    __schedule__(head, definition)
+  end
+  
+  def __schedule__([head | tail], definition) do
+    __schedule__(head, definition)
+    
+    __schedule__(tail, definition)
+  end
+  
+  def __schedule__(trigger, definition) do
+    Traverse.Workflow.Trigger.start_trigger(trigger, definition)
+  end
 
   def start_workflow(definition, initial_state) do
     {:ok, parsed_definition} = Poison.Parser.parse(definition)
     {:ok, parsed_state} = Poison.Parser.parse(initial_state)
-
+    
     GenServer.cast(__MODULE__, {:start_workflow, {parsed_definition, parsed_state}})
   end
 
