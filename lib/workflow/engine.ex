@@ -7,23 +7,23 @@ defmodule Traverse.Workflow.Engine do
   
   def schedule_workflow(triggers, definition) do
     {:ok, parsed_triggers} = Poison.Parser.parse(triggers)
-    
-    __schedule__(parsed_triggers, definition)
+
+    schedule(parsed_triggers, definition)
     
     :ok
   end
 
-  def __schedule__([head | _tail = []], definition) do
-    __schedule__(head, definition)
+  defp schedule([head | _tail = []], definition) do
+    schedule(head, definition)
   end
-  
-  def __schedule__([head | tail], definition) do
-    __schedule__(head, definition)
-    
-    __schedule__(tail, definition)
+
+  defp schedule([head | tail], definition) do
+    schedule(head, definition)
+
+    schedule(tail, definition)
   end
-  
-  def __schedule__(trigger, definition) do
+
+  defp schedule(trigger, definition) do
     Traverse.Workflow.Trigger.start_trigger(trigger, definition)
   end
 
