@@ -23,7 +23,8 @@ defmodule Traverse.MixProject do
       {:elixir_uuid, "~> 1.2"},
       {:poison, "~> 3.1"},
       {:quantum, "~> 2.3"},
-      {:timex, "~> 3.0"}
+      {:timex, "~> 3.0"},
+      {:phoenix_pubsub, "~> 1.1.2"}
     ]
   end
 end
