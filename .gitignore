@@ -23,3 +23,5 @@ erl_crash.dump
 traverse-*.tar
 
 .idea/
+
+/src/*.erl
