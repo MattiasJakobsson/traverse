@@ -13,11 +13,11 @@ defmodule Traverse.Triggers.PhoenixPubSubTrigger do
     :ok
   end
   
-  def handle_info({event_name, event_data}, {settings, workflow}) do
+  def handle_info({event_name, event_data}, definition) do
     if String.to_atom(settings.event) == event_name do
       GenServer.cast(self(), {:trigger, {event_name, event_data}})
     end
     
-    {:noreply, {settings, workflow}}
+    {:noreply, definition}
   end
 end

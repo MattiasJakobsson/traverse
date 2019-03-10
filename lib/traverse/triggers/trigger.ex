@@ -4,14 +4,15 @@ defmodule Traverse.Triggers.Trigger do
   
   defmodule Definition do
     defstruct settings: %{},
-              workflow: nil,
+              data: %{},
+              subscriber: nil,
               trigger_id: nil,
               executions: 0,
               max_executions: 0
   end
 
-  def start_trigger(settings, workflow, max_executions \\ 0) do
-    definition = %Definition{settings: settings, workflow: workflow, trigger_id: UUID.uuid4(), max_executions: max_executions}
+  def start_trigger(settings, data, subscriber \\ self(), max_executions \\ 0) do
+    definition = %Definition{settings: settings, data: data, subscriber: subscriber, trigger_id: UUID.uuid4(), max_executions: max_executions}
 
     GenServer.start_link(
       String.to_existing_atom("Elixir.#{settings.triggerType}"),
@@ -44,22 +45,22 @@ defmodule Traverse.Triggers.Trigger do
       def handle_cast(:trigger, definition), do: handle_cast({:trigger, "{}"}, definition)
 
       def handle_cast({:trigger, initial_state}, %Definition{:executions => executions, :max_executions => max_executions} = definition) when max_executions > 0 and executions >= max_executions do
-        handle_workflow_started(definition)
+        handle_triggered(definition)
       end
       
       def handle_cast({:trigger, initial_state}, definition) do
-        Traverse.Engine.start_workflow(definition.workflow, initial_state)
+        GenServer.cast(definition.subscriber, {:trigger, definition.data, initial_state})
 
-        handle_workflow_started(Map.put(definition, :executions, definition.executions + 1))
+        handle_triggered(Map.put(definition, :executions, definition.executions + 1))
       end
 
-      defp handle_workflow_started(%Definition{:executions => executions, :max_executions => max_executions} = definition) when max_executions > 0 and executions >= max_executions do
+      defp handle_triggered(%Definition{:executions => executions, :max_executions => max_executions} = definition) when max_executions > 0 and executions >= max_executions do
         Traverse.Triggers.Trigger.stop_trigger(definition.trigger_id)
 
         {:noreply, definition}
       end
       
-      defp handle_workflow_started(definition) do
+      defp handle_triggered(definition) do
         {:noreply, definition}
       end
       
