@@ -14,7 +14,7 @@ defmodule Traverse.Triggers.PhoenixPubSubTrigger do
   end
   
   def handle_info({event_name, event_data}, definition) do
-    if String.to_atom(settings.event) == event_name do
+    if String.to_atom(definition.settings.event) == event_name do
       GenServer.cast(self(), {:trigger, {event_name, event_data}})
     end
     

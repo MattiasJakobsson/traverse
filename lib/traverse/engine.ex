@@ -32,6 +32,8 @@ defmodule Traverse.Engine do
     {:ok, parsed_triggers} = Poison.Parser.parse(triggers)
 
     schedule(parsed_triggers, definition)
+
+    {:noreply, workflows}
   end
 
   def handle_cast({:start_workflow, {definition, initial_state}}, workflows) do

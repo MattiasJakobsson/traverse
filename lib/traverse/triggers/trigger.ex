@@ -11,7 +11,7 @@ defmodule Traverse.Triggers.Trigger do
               max_executions: 0
   end
 
-  def start_trigger(settings, data, subscriber \\ self(), max_executions \\ 0) do
+  def start_trigger(settings, data, max_executions \\ 0, subscriber \\ self()) do
     definition = %Definition{settings: settings, data: data, subscriber: subscriber, trigger_id: UUID.uuid4(), max_executions: max_executions}
 
     GenServer.start_link(
