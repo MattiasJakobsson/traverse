@@ -1,5 +1,9 @@
-defmodule Traverse.Workflow.Step do
+defmodule Traverse.Steps.Step do
   @callback run_step(definition, state) :: :started | nil | {definition, state} when definition: Any, state: Any
+
+  def find_all_step_types() do
+    available_modules(Traverse.Steps.Step) |> Enum.reduce([], &load_step/2)
+  end
 
   def start_step(workflow_id, definition, state) do
     step_id = UUID.uuid4()
@@ -15,10 +19,27 @@ defmodule Traverse.Workflow.Step do
     {:ok, step_id}
   end
 
+  defp load_step(module, modules) do
+    if Code.ensure_loaded?(module), do: [module | modules], else: modules
+  end
+
+  defp available_modules(plugin_type) do
+    Mix.Task.run("loadpaths", [])
+
+    Path.wildcard(Path.join([Mix.Project.build_path, "**/ebin/**/*.beam"]))
+    |> Stream.map(fn path ->
+      {:ok, {mod, chunks}} = :beam_lib.chunks('#{path}', [:attributes])
+      {mod, get_in(chunks, [:attributes, :behaviour])}
+    end)
+    |> Stream.filter(fn {_mod, behaviours} -> is_list(behaviours) && plugin_type in behaviours end)
+    |> Enum.uniq
+    |> Enum.map(fn {module, _} -> module end)
+  end
+
   defmacro __using__(_) do
     quote location: :keep do
       use GenServer
-      @behaviour Traverse.Workflow.Step
+      @behaviour Traverse.Steps.Step
 
       def init(data) do
         {:ok, data}
@@ -30,13 +51,13 @@ defmodule Traverse.Workflow.Step do
       end
 
       def handle_cast({:step_done, step_state, :next}, {workflow_id, step_id, definition, state}) do
-        Traverse.Workflow.Workflow.step_finished(workflow_id, definition, step_id, step_state, Map.get(definition, :next))
+        Traverse.Workflow.step_finished(workflow_id, definition, step_id, step_state, Map.get(definition, :next))
 
         {:noreply, {workflow_id, step_id, definition, state}}
       end
 
       def handle_cast({:step_done, step_state, next_step}, {workflow_id, step_id, definition, state}) do
-        Traverse.Workflow.Workflow.step_finished(workflow_id, definition, step_id, step_state, next_step)
+        Traverse.Workflow.step_finished(workflow_id, definition, step_id, step_state, next_step)
 
         {:noreply, {workflow_id, step_id, definition, state}}
       end

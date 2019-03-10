@@ -1,10 +1,10 @@
-defmodule Traverse.Workflow.Query do
+defmodule Traverse.Steps.Command do
   @callback execute(params) :: Any when params: Any
 
   defmacro __using__(opts) do
     quote location: :keep, bind_quoted: [opts: opts] do
       use GenServer
-      @behaviour Traverse.Workflow.Query
+      @behaviour Traverse.Steps.Command
 
       def init(data) do
         {:ok, data}
@@ -12,7 +12,7 @@ defmodule Traverse.Workflow.Query do
 
       def handle_call({:execute, params}, _from, {workflow_id, step_id, definition, state}) do
         response = execute(Traverse.ParameterInterpreter.eval_code(params, %{state: state}))
-
+        
         {:reply, response, {workflow_id, step_id, definition, state}}
       end
 
@@ -23,7 +23,7 @@ defmodule Traverse.Workflow.Query do
   defmacro __before_compile__(env) do
     unless Module.defines?(env.module, {:execute, 1}) do
       message = """
-      function execute/1 required by behaviour Query is not implemented \
+      function execute/1 required by behaviour Command is not implemented \
       (in module #{inspect(env.module)}).
       We will inject a default implementation for now:
         def execute(params) do

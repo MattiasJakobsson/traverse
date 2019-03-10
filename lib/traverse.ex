@@ -7,7 +7,7 @@ defmodule Traverse do
     opts = [strategy: :one_for_one, name: Traverse.Supervisor]
 
     children = [
-      {Traverse.Workflow.Engine, []},
+      {Traverse.Engine, []},
       worker(Traverse.CronScheduler, [])
     ]
 

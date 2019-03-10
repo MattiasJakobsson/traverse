@@ -1,4 +1,4 @@
-defmodule Traverse.Workflow.Workflow do
+defmodule Traverse.Workflow do
   use GenServer
 
   def start_workflow(definition, initial_state) do
@@ -34,7 +34,7 @@ defmodule Traverse.Workflow.Workflow do
 
     new_state = Map.put(state, step_definition.id, step_state)
 
-    Traverse.Workflow.Engine.workflow_finished(workflow_id, new_state)
+    Traverse.Engine.workflow_finished(workflow_id, new_state)
 
     {:noreply, {definition, new_state, workflow_id}}
   end
@@ -50,6 +50,6 @@ defmodule Traverse.Workflow.Workflow do
   end
 
   def execute_next_step(workflow_id, step_definition, state) do
-    Traverse.Workflow.Step.start_step(workflow_id, step_definition, state)
+    Traverse.Steps.Step.start_step(workflow_id, step_definition, state)
   end
 end

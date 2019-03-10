@@ -1,6 +1,10 @@
-defmodule Traverse.Workflow.Engine do
+defmodule Traverse.Engine do
   use GenServer
 
+  def find_all_available_step_types() do
+    Traverse.Steps.Step.find_all_step_types()
+  end
+  
   def start_link(_) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
@@ -24,7 +28,7 @@ defmodule Traverse.Workflow.Engine do
   end
 
   defp schedule(trigger, definition) do
-    Traverse.Workflow.Trigger.start_trigger(trigger, definition)
+    Traverse.Triggers.Trigger.start_trigger(trigger, definition)
   end
 
   def start_workflow(definition, initial_state) do
@@ -43,7 +47,7 @@ defmodule Traverse.Workflow.Engine do
   end
 
   def handle_cast({:start_workflow, {definition, initial_state}}, workflows) do
-    workflow_id = Traverse.Workflow.Workflow.start_workflow(definition, initial_state)
+    workflow_id = Traverse.Workflow.start_workflow(definition, initial_state)
     {:noreply, [workflow_id | workflows]}
   end
 

@@ -1,5 +1,5 @@
-defmodule Traverse.Workflow.PhoenixPubSubTrigger do
-  use Traverse.Workflow.Trigger
+defmodule Traverse.Triggers.PhoenixPubSubTrigger do
+  use Traverse.Triggers.Trigger
 
   def start(settings) do
     Phoenix.PubSub.subscribe(settings.server |> to_string |> String.to_atom, settings.topic)

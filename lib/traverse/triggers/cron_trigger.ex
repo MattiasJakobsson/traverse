@@ -1,5 +1,5 @@
-defmodule Traverse.Workflow.CronTrigger do
-  use Traverse.Workflow.Trigger
+defmodule Traverse.Triggers.CronTrigger do
+  use Traverse.Triggers.Trigger
 
   def start(settings) do
     {:ok, parsed_schedule} = Crontab.CronExpression.Parser.parse(settings.schedule, true)
