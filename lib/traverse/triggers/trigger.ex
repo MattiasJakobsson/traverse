@@ -5,11 +5,13 @@ defmodule Traverse.Triggers.Trigger do
   defmodule Definition do
     defstruct settings: %{},
               workflow: nil,
-              trigger_id: nil
+              trigger_id: nil,
+              executions: 0,
+              max_executions: 0
   end
 
-  def start_trigger(settings, workflow) do
-    definition = %Traverse.Triggers.Trigger.Definition{settings: settings, workflow: workflow, trigger_id: UUID.uuid4()}
+  def start_trigger(settings, workflow, max_executions \\ 0) do
+    definition = %Definition{settings: settings, workflow: workflow, trigger_id: UUID.uuid4(), max_executions: max_executions}
 
     GenServer.start_link(
       String.to_existing_atom("Elixir.#{settings.triggerType}"),
@@ -29,6 +31,8 @@ defmodule Traverse.Triggers.Trigger do
   defmacro __using__(_) do
     quote location: :keep do
       use GenServer
+      import Traverse.Triggers.Trigger
+      
       @behaviour Traverse.Triggers.Trigger
 
       def init(definition) do
@@ -38,10 +42,24 @@ defmodule Traverse.Triggers.Trigger do
       end
 
       def handle_cast(:trigger, definition), do: handle_cast({:trigger, "{}"}, definition)
+
+      def handle_cast({:trigger, initial_state}, %Definition{:executions => executions, :max_executions => max_executions} = definition) when max_executions > 0 and executions >= max_executions do
+        handle_workflow_started(definition)
+      end
       
       def handle_cast({:trigger, initial_state}, definition) do
         Traverse.Engine.start_workflow(definition.workflow, initial_state)
-        
+
+        handle_workflow_started(Map.put(definition, :executions, definition.executions + 1))
+      end
+
+      defp handle_workflow_started(%Definition{:executions => executions, :max_executions => max_executions} = definition) when max_executions > 0 and executions >= max_executions do
+        Traverse.Triggers.Trigger.stop_trigger(definition.trigger_id)
+
+        {:noreply, definition}
+      end
+      
+      defp handle_workflow_started(definition) do
         {:noreply, definition}
       end
       
