@@ -10,10 +10,10 @@ defmodule Traverse.Workflow.Query do
         {:ok, data}
       end
 
-      def handle_call({:execute, params}, _from, data) do
-        response = execute(params)
+      def handle_call({:execute, params}, _from, {workflow_id, step_id, definition, state}) do
+        response = execute(Traverse.ParameterInterpreter.eval_code(params, %{state: state}))
 
-        {:reply, response, data}
+        {:reply, response, {workflow_id, step_id, definition, state}}
       end
 
       defoverridable init: 1
@@ -34,7 +34,6 @@ defmodule Traverse.Workflow.Query do
       :elixir_errors.warn(env.line, env.file, message)
 
       quote do
-        @doc false
         def execute(params) do
           nil
         end

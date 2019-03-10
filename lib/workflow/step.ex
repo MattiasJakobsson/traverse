@@ -5,7 +5,7 @@ defmodule Traverse.Workflow.Step do
     step_id = UUID.uuid4()
 
     GenServer.start_link(
-      String.to_existing_atom("Elixir.#{definition["stepType"]}"),
+      String.to_existing_atom("Elixir.#{definition.stepType}"),
       {workflow_id, step_id, definition, state},
       name: {:global, step_id}
     )
@@ -30,11 +30,7 @@ defmodule Traverse.Workflow.Step do
       end
 
       def handle_cast({:step_done, step_state, :next}, {workflow_id, step_id, definition, state}) do
-        if Map.has_key?(definition, "next") do
-          Traverse.Workflow.Workflow.step_finished(workflow_id, definition, step_id, step_state, definition["next"])
-        else
-          Traverse.Workflow.Workflow.step_finished(workflow_id, definition, step_id, step_state, nil)
-        end
+        Traverse.Workflow.Workflow.step_finished(workflow_id, definition, step_id, step_state, Map.get(definition, :next))
 
         {:noreply, {workflow_id, step_id, definition, state}}
       end
@@ -101,7 +97,6 @@ defmodule Traverse.Workflow.Step do
       :elixir_errors.warn(env.line, env.file, message)
 
       quote do
-        @doc false
         def run_step(definition, state) do
           nil
         end

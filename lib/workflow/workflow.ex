@@ -32,7 +32,7 @@ defmodule Traverse.Workflow.Workflow do
   def handle_cast({:step_done, step_definition, step_id, step_state, nil}, {definition, state, workflow_id}) do
     GenServer.stop({:global, step_id})
 
-    new_state = Map.put(state, step_definition["id"], step_state)
+    new_state = Map.put(state, step_definition.id, step_state)
 
     Traverse.Workflow.Engine.workflow_finished(workflow_id, new_state)
 
@@ -42,7 +42,7 @@ defmodule Traverse.Workflow.Workflow do
   def handle_cast({:step_done, step_definition, step_id, step_state, next_step}, {definition, state, workflow_id}) do
     GenServer.stop({:global, step_id})
 
-    new_state = Map.put(state, step_definition["id"], step_state)
+    new_state = Map.put(state, step_definition.id, step_state)
 
     execute_next_step(workflow_id, next_step, new_state)
 

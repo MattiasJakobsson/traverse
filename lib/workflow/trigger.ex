@@ -1,6 +1,4 @@
 defmodule Traverse.Workflow.Trigger do
-  @moduledoc false
-  
   @callback start(settings) :: :ok when settings: Any
   @callback stop(settings) :: :ok when settings: Any
 
@@ -8,7 +6,7 @@ defmodule Traverse.Workflow.Trigger do
     trigger_id = UUID.uuid4()
 
     GenServer.start_link(
-      String.to_existing_atom("Elixir.#{settings["triggerType"]}"),
+      String.to_existing_atom("Elixir.#{settings.triggerType}"),
       {settings, workflow},
       name: {:global, trigger_id}
     )
@@ -71,7 +69,6 @@ defmodule Traverse.Workflow.Trigger do
       :elixir_errors.warn(env.line, env.file, message)
 
       quote do
-        @doc false
         def start(_settings) do
           nil
         end
@@ -93,7 +90,6 @@ defmodule Traverse.Workflow.Trigger do
       :elixir_errors.warn(env.line, env.file, message)
 
       quote do
-        @doc false
         def stop(_settings) do
           nil
         end
