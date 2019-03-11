@@ -13,12 +13,13 @@ defmodule Traverse.Workflow do
     GenServer.start_link(
       __MODULE__,
       workflow_definition,
-      name: { :global, workflow_definition.workflow_id }
+      name: {:global, workflow_definition.workflow_id}
     )
 
     workflow_definition
   end
 
+  #TODO: Remove in favor of pub/sub communication
   def step_finished(workflow_id, step_definition, step_id, state, next_step) do
     GenServer.cast({:global, workflow_id}, {:step_done, {step_definition, step_id, state, next_step}})
   end
@@ -34,24 +35,18 @@ defmodule Traverse.Workflow do
 
     {:noreply, definition}
   end
-
-  def handle_cast({:step_done, {step_definition, step_id, step_state, nil}}, definition) do
-    GenServer.stop({:global, step_id})
-
-    new_definition = Map.put(definition, :current_state, Map.put(definition.current_state, String.to_atom(step_definition.id), step_state))
-
-    Traverse.Engine.workflow_finished(new_definition.workflow_id, new_definition.current_state)
-
-    {:noreply, new_definition}
-  end
-
+  
   def handle_cast({:step_done, {step_definition, step_id, step_state, next_step}}, definition) do
     GenServer.stop({:global, step_id})
-    
+
     new_definition = Map.put(definition, :current_state, Map.put(definition.current_state, String.to_atom(step_definition.id), step_state))
+    
+    #TODO: Pub/sub instead of static finished call
+    case next_step do
+      nil -> Traverse.Engine.workflow_finished(new_definition.workflow_id, new_definition.current_state)
+      step -> Traverse.Steps.Step.start_step(definition.workflow_id, step, new_definition.current_state)
+    end
 
-    Traverse.Steps.Step.start_step(definition.workflow_id, next_step, new_definition.current_state)
-
-    {:noreply, definition}
+    {:noreply, new_definition}
   end
 end
