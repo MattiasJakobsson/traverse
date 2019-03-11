@@ -50,7 +50,7 @@ defmodule Traverse.Workflow do
     
     new_definition = Map.put(definition, :current_state, Map.put(definition.current_state, String.to_atom(step_definition.id), step_state))
 
-    Traverse.Steps.Step.start_step(definition.workflow_id, step_definition, new_definition.current_state)
+    Traverse.Steps.Step.start_step(definition.workflow_id, next_step, new_definition.current_state)
 
     {:noreply, definition}
   end
