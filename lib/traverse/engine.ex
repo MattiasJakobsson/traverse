@@ -52,7 +52,7 @@ defmodule Traverse.Engine do
     handle_cast({:start_workflow, data}, workflows)
   end
 
-  defp schedule([head | _tail = []], definition) do
+  defp schedule([head], definition) do
     schedule(head, definition)
   end
 

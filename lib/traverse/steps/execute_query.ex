@@ -1,16 +1,16 @@
 defmodule Traverse.Steps.ExecuteQuery do
   use Traverse.Steps.Step
 
-  def run_step(definition, _) do
+  def run_step(definition, state) do
     {:ok, process} = GenServer.start_link(String.to_existing_atom("Elixir.#{definition.query}"), [])
 
-    response = GenServer.call(process,  {:execute, definition.params})
+    {:ok, response} = GenServer.call(process, {:execute, Traverse.ParameterInterpreter.eval_code(definition.params, %{state: state})})
 
     {:next, response}
   end
 
   defmodule Query do
-    @callback execute(params) :: Any when params: Any
+    @callback execute(params) :: %{} when params: %{} | nil
 
     defmacro __using__(opts) do
       quote location: :keep, bind_quoted: [opts: opts] do
@@ -21,38 +21,14 @@ defmodule Traverse.Steps.ExecuteQuery do
           {:ok, data}
         end
 
-        def handle_call({:execute, params}, _from, {workflow_id, step_id, definition, state}) do
-          response = execute(Traverse.ParameterInterpreter.eval_code(params, %{state: state}))
+        def handle_call({:execute, params}, _, data) do
+          response = execute(params)
 
-          {:reply, response, {workflow_id, step_id, definition, state}}
+          {:reply, response, data}
         end
 
         defoverridable init: 1
       end
     end
-
-    defmacro __before_compile__(env) do
-      unless Module.defines?(env.module, {:execute, 1}) do
-        message = """
-        function execute/1 required by behaviour Query is not implemented \
-              (in module #{inspect(env.module)}).
-        We will inject a default implementation for now:
-          def execute(params) do
-            nil
-          end
-        """
-
-        :elixir_errors.warn(env.line, env.file, message)
-
-        quote do
-          def execute(params) do
-            nil
-          end
-
-          defoverridable execute: 1
-        end
-      end
-    end
   end
-
 end

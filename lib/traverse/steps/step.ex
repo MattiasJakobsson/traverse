@@ -1,8 +1,11 @@
 defmodule Traverse.Steps.Step do
-  @callback run_step(definition, state) :: :started | nil | {definition, state} when definition: Any, state: Any
-
-  def find_all_step_types() do
-    available_modules(Traverse.Steps.Step) |> Enum.reduce([], &load_step/2)
+  @callback run_step(definition, state) :: :started | :next | nil | {next_step, step_state} when definition: %{}, state: %{}, step_state: %{} | nil, next_step: %{} | :next | nil
+  
+  defmodule Definition do
+    defstruct workflow_id: nil,
+              step_id: nil,
+              step_definition: %{},
+              state: %{}
   end
 
   def start_step(workflow_id, definition, state) do
@@ -10,13 +13,15 @@ defmodule Traverse.Steps.Step do
 
     GenServer.start_link(
       String.to_existing_atom("Elixir.#{definition.stepType}"),
-      {workflow_id, step_id, definition, state},
+      %Definition{workflow_id: workflow_id, step_id: step_id, step_definition: definition, state: state},
       name: {:global, step_id}
     )
 
-    GenServer.cast({:global, step_id}, :execute)
-
     {:ok, step_id}
+  end
+  
+  def find_all_step_types() do
+    available_modules(Traverse.Steps.Step) |> Enum.reduce([], &load_step/2)
   end
 
   defp load_step(module, modules) do
@@ -39,90 +44,42 @@ defmodule Traverse.Steps.Step do
   defmacro __using__(_) do
     quote location: :keep do
       use GenServer
+      import Traverse.Steps.Step
+      
       @behaviour Traverse.Steps.Step
 
-      def init(data) do
-        {:ok, data}
+      def init(definition) do
+        GenServer.cast(self(), :execute)
+        
+        {:ok, definition}
       end
 
-      def handle_cast(:execute, {workflow_id, step_id, definition, state}) do
-        run_step(definition, state) |> handle_step_started()
-        {:noreply, {workflow_id, step_id, definition, state}}
-      end
-
-      def handle_cast({:step_done, step_state, :next}, {workflow_id, step_id, definition, state}) do
-        Traverse.Workflow.step_finished(workflow_id, definition, step_id, step_state, Map.get(definition, :next))
-
-        {:noreply, {workflow_id, step_id, definition, state}}
-      end
-
-      def handle_cast({:step_done, step_state, next_step}, {workflow_id, step_id, definition, state}) do
-        Traverse.Workflow.step_finished(workflow_id, definition, step_id, step_state, next_step)
-
-        {:noreply, {workflow_id, step_id, definition, state}}
-      end
-
-      def handle_step_started(:started) do
-        nil
-      end
-
-      def handle_step_started(:next) do
-        done(:next)
-      end
-
-      def handle_step_started({:next, step_state}) do
-        done(step_state, :next)
-      end
-
-      def handle_step_started({next_step, step_state}) do
-        done(step_state, next_step)
-      end
-
-      def handle_step_started(step_state) do
-        done(step_state)
-      end
-
-      def done() do
-        done(nil)
-      end
-
-      def done(:next) do
-        done(nil, :next)
-      end
-
-      def done(step_state) do
-        done(step_state, nil)
-      end
-
-      def done(step_state, :next) do
-        GenServer.cast(self(), {:step_done, step_state, :next})
-      end
-
-      def done(step_state, next_step) do
-        GenServer.cast(self(), {:step_done, step_state, next_step})
-      end
-    end
-  end
-
-  defmacro __before_compile__(env) do
-    unless Module.defines?(env.module, {:run_step, 2}) do
-      message = """
-      function run_step/2 required by behaviour Step is not implemented \
-      (in module #{inspect(env.module)}).
-      We will inject a default implementation for now:
-        def run_step(definition, state) do
-          nil
+      def handle_cast(:execute, definition) do
+        case run_step(definition.step_definition, definition.state) do
+          :started -> nil
+          response -> done(response)
         end
-      """
+        
+        {:noreply, definition}
+      end
 
-      :elixir_errors.warn(env.line, env.file, message)
+      def handle_cast({:done, :next}, definition), do: handle_cast({:done, {:next, nil}}, definition)
 
-      quote do
-        def run_step(definition, state) do
-          nil
-        end
+      def handle_cast({:done, {:next, step_state}}, definition) do
+        handle_cast({:done, {Map.get(definition.step_definition, :next), step_state}}, definition)
+      end
+      
+      def handle_cast({:done, next_step, step_state}, definition) do
+        #TODO: Publish event instead of static call
+        Traverse.Workflow.step_finished(definition.workflow_id, definition.step_definition, definition.step_id, step_state, next_step)
 
-        defoverridable run_step: 2
+        {:noreply, definition}
+      end
+      
+      def done(), do: done(:next)
+      def done(nil), do: done({nil, nil})
+      def done(options) when options: :next or {:next, %{}} or {nil, %{}} or {%{}, nil} or {%{}, %{}} or {nil, nil} do
+        GenServer.cast(self(), {:done, options})
       end
     end
   end
