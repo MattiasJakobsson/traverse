@@ -20,10 +20,6 @@ defmodule Traverse.Engine do
     GenServer.cast(__MODULE__, {:start_workflow, {parsed_definition, parsed_state}})
   end
 
-  def workflow_finished(workflow_id, state) do
-    GenServer.cast(__MODULE__, {:execution_finished, {workflow_id, state}})
-  end
-
   def init(workflows) do
     {:ok, workflows}
   end

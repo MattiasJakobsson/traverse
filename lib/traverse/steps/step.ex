@@ -1,19 +1,20 @@
 defmodule Traverse.Steps.Step do
   @callback run_step(definition, state) :: :started | :next | nil | {next_step, step_state} when definition: %{}, state: %{}, step_state: %{} | nil, next_step: %{} | :next | nil
-  
+
   defmodule Definition do
     defstruct workflow_id: nil,
               step_id: nil,
               step_definition: %{},
-              state: %{}
+              state: %{},
+              parent: nil
   end
 
-  def start_step(workflow_id, definition, state) do
+  def start_step(workflow_id, definition, state, parent \\ self()) do
     step_id = UUID.uuid4()
 
     GenServer.start_link(
       String.to_existing_atom("Elixir.#{definition.stepType}"),
-      %Definition{workflow_id: workflow_id, step_id: step_id, step_definition: definition, state: state},
+      %Definition{workflow_id: workflow_id, step_id: step_id, step_definition: definition, state: state, parent: parent},
       name: {:global, step_id}
     )
 
@@ -70,8 +71,7 @@ defmodule Traverse.Steps.Step do
       end
       
       def handle_cast({:done, next_step, step_state}, definition) do
-        #TODO: Publish event instead of static call
-        Traverse.Workflow.step_finished(definition.workflow_id, definition.step_definition, definition.step_id, step_state, next_step)
+        GenServer.cast(definition, {:step_done, {definition.step_id, step_state, next_step}})
 
         {:noreply, definition}
       end
