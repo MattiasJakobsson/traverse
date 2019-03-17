@@ -2,7 +2,7 @@ defmodule Traverse.Engine do
   use GenServer
 
   def find_all_available_step_types() do
-    Traverse.Steps.Step.find_all_step_types()
+    Traverse.PluginLoader.find_all_plugin_types(Traverse.Steps.Step)
   end
   
   def start_link(_) do
